@@ -90,16 +90,20 @@ M.capture = function(bufnr, opts, top, bottom)
 	end))
 end
 
-function M.capture_buf(bufnr)
+function M.capture_buffer(bufnr)
 	M.capture(bufnr or 0, M.user_opts)
 end
 
 function M.capture_selection()
-	local start_pos = vim.fn.getpos("v")
-	local start_line = start_pos[2]
-	local end_pos = vim.fn.getpos(".")
-	local end_line = end_pos[2]
-	M.capture(end_pos[1], M.user_opts, start_line, end_line)
+	local start_line = vim.fn.line("v")
+	local end_line = vim.fn.line(".")
+	M.capture(0, M.user_opts, start_line, end_line)
+end
+
+function M.capture_viewport()
+	local start_line = vim.fn.line("w0")
+	local end_line = vim.fn.line("w$")
+	M.capture(0, M.user_opts, start_line, end_line)
 end
 
 return M
