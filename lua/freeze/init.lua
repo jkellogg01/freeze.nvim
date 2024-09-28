@@ -1,41 +1,35 @@
----@param name string
----@param top? integer
----@param bottom? integer
-local capture = function(name, top, bottom)
-	top = top or 0
-	bottom = bottom or vim.api.nvim_buf_line_count(0)
-	-- TODO: come up with a system to fill in the configuration
-	-- maybe create a temp config.json file, reference it with --config,
-	-- and then delete it after the screenshot is taken?
-	vim.fn.system({
-		"freeze",
-		name,
-		"--lines",
-		top .. "," .. bottom,
-		"--output",
-		"nvim-" .. os.date("%Y%m%d%H%M%S") .. ".png",
-		"--font.family",
-		-- HACK: need to figure out how to actually find the user's font
-		"Iosevka Nerd Font Mono",
-	})
-end
+---@class freeze_config
+---@field window? boolean
+---@field theme? string
+---@field border? { radius: integer, width: integer, color: string }
+---@field shadow? { blur: integer, x: integer, y: integer }
+---@field padding? integer[]
+---@field margin? integer[]
+---@field background? string
+---@field font? { family: string, size: integer, ligatures: boolean }
+---@field line_height? float
+---@field show_line_numbers? boolean
 
 local M = {}
 
----@class freeze_config
----@field window boolean
----@field theme string
----@field border { radius: integer, width: integer, color: string }
----@field shadow { blur: integer, x: integer, y: integer }
----@field padding [ integer, integer, integer, integer ]
----@field margin string
----@field background string
----@field font { family: string, size: integer, ligatures: boolean }
----@field line_height float
-
----@param opts freeze_config
 M.setup = function(opts)
-	M.opts = vim.tbl_deep_extend("force", {
+	M.user_opts = opts
+end
+
+--[[
+functions to implement:
+
+capture_buffer
+capture_viewport
+capture_selection
+--]]
+
+---@param bufnr integer
+---@param opts freeze_config
+---@param top? integer
+---@param bottom? integer
+M.capture = function(bufnr, opts, top, bottom)
+	opts = vim.tbl_deep_extend("keep", opts, {
 		window = false,
 		theme = "charm",
 		border = {
@@ -54,9 +48,7 @@ M.setup = function(opts)
 			20,
 			20,
 		},
-		margin = {
-			0,
-		},
+		margin = { 0 },
 		background = "#171717",
 		font = {
 			family = "JetBrains Mono",
@@ -64,19 +56,42 @@ M.setup = function(opts)
 			ligatures = true,
 		},
 		line_height = 1.2,
-	}, opts)
+		show_line_numbers = false,
+	})
+	local result_path = vim.fn.stdpath("data") .. "/freeze/nvim-" .. os.date("%Y%m%d%H%M%S") .. ".png"
+	top = top or 0
+	bottom = bottom or vim.api.nvim_buf_line_count(bufnr)
+	vim.inspect(vim.system({
+		"freeze",
+		vim.api.nvim_buf_get_name(bufnr),
+		"--lines=" .. top .. "," .. bottom,
+		"--output=" .. result_path,
+		"--window=" .. tostring(opts.window or "false"),
+		"--theme=" .. opts.theme,
+		"--border.radius=" .. tostring(opts.border.radius),
+		"--border.width=" .. tostring(opts.border.width),
+		"--border.color=" .. opts.border.color,
+		"--shadow.blur=" .. tostring(opts.shadow.blur),
+		"--shadow.x=" .. tostring(opts.shadow.x),
+		"--shadow.y=" .. tostring(opts.shadow.y),
+		"--padding=" .. table.concat(opts.padding, ","),
+		"--margin=" .. table.concat(opts.margin, ","),
+		"--background=" .. opts.background,
+		"--font.family=" .. opts.font.family,
+		"--font.size=" .. tostring(opts.font.size),
+		"--font.ligatures=" .. tostring(opts.font.ligatures),
+		"--line-height=" .. tostring(opts.line_height),
+		"--show-line-numbers=" .. tostring(opts.show_line_numbers),
+	}, {}, function(result)
+		print(result.code, result.stderr)
+		if result.code == 0 then
+			print("capture saved at", result_path)
+		end
+	end))
 end
 
---[[
-functions to implement:
-
-capture_buffer
-capture_viewport
-capture_selection
---]]
-
-M.capture_buf = function()
-	capture(vim.api.nvim_buf_get_name(0))
+M.capture_buf = function(bufnr)
+	M.capture(bufnr or 0, M.user_opts)
 end
 
 return M
