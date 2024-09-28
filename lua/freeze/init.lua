@@ -12,24 +12,9 @@
 
 local M = {}
 
-M.setup = function(opts)
-	M.user_opts = opts
-end
-
---[[
-functions to implement:
-
-capture_buffer
-capture_viewport
-capture_selection
---]]
-
----@param bufnr integer
 ---@param opts freeze_config
----@param top? integer
----@param bottom? integer
-M.capture = function(bufnr, opts, top, bottom)
-	opts = vim.tbl_deep_extend("keep", opts, {
+M.setup = function(opts)
+	M.user_opts = vim.tbl_deep_extend("keep", opts, {
 		window = false,
 		theme = "charm",
 		border = {
@@ -58,6 +43,22 @@ M.capture = function(bufnr, opts, top, bottom)
 		line_height = 1.2,
 		show_line_numbers = false,
 	})
+end
+
+--[[
+functions to implement:
+
+capture_buffer
+capture_viewport
+capture_selection
+--]]
+
+---@param bufnr integer
+---@param opts? freeze_config
+---@param top? integer
+---@param bottom? integer
+M.capture = function(bufnr, opts, top, bottom)
+	opts = vim.tbl_deep_extend("keep", opts or {}, M.user_opts)
 	local result_path = vim.fn.stdpath("data") .. "/freeze/nvim-" .. os.date("%Y%m%d%H%M%S") .. ".png"
 	top = top or 0
 	bottom = bottom or vim.api.nvim_buf_line_count(bufnr)
@@ -90,20 +91,23 @@ M.capture = function(bufnr, opts, top, bottom)
 	end))
 end
 
-function M.capture_buffer(bufnr)
-	M.capture(bufnr or 0, M.user_opts)
+---@param opts? freeze_config
+function M.capture_buffer(opts)
+	M.capture(0, opts)
 end
 
-function M.capture_selection()
+---@param opts? freeze_config
+function M.capture_selection(opts)
 	local start_line = vim.fn.line("v")
 	local end_line = vim.fn.line(".")
-	M.capture(0, M.user_opts, start_line, end_line)
+	M.capture(0, opts, start_line, end_line)
 end
 
-function M.capture_viewport()
+---@param opts? freeze_config
+function M.capture_viewport(opts)
 	local start_line = vim.fn.line("w0")
 	local end_line = vim.fn.line("w$")
-	M.capture(0, M.user_opts, start_line, end_line)
+	M.capture(0, opts, start_line, end_line)
 end
 
 return M
